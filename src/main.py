@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from src.db import Base, engine
 from src.models.task import Task  # noqa: F401  # 注册模型到 Base.metadata，供建表
-from src.routes import tasks
+from src.routes import ai, tasks
 
 
 @asynccontextmanager
@@ -23,6 +23,7 @@ app = FastAPI(
 )
 
 app.include_router(tasks.router, prefix="/api/v1")
+app.include_router(ai.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["meta"])

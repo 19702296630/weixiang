@@ -1,5 +1,6 @@
 """Pydantic 请求/响应模型（API 边界的数据校验）。"""
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,3 +52,23 @@ class TaskListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# ===================== AI 功能 =====================
+
+
+class GenerateRequest(BaseModel):
+    """自然语言任务生成请求。"""
+
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class TaskDraft(BaseModel):
+    """自然语言生成的任务草稿（不落库），`source` 标记结果来源。"""
+
+    title: str
+    description: str | None
+    priority: TaskPriority
+    tags: list[str] | None
+    due_date: datetime | None
+    source: Literal["llm", "fallback"]
