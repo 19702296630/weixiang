@@ -72,3 +72,19 @@ class TaskDraft(BaseModel):
     tags: list[str] | None
     due_date: datetime | None
     source: Literal["llm", "fallback"]
+
+
+class RecommendRequest(BaseModel):
+    """标签/优先级/分类推荐请求。"""
+
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+
+
+class RecommendResponse(BaseModel):
+    """标签/优先级/分类推荐响应。"""
+
+    tags: list[str]
+    priority: TaskPriority
+    category: str
+    source: Literal["llm", "fallback"]

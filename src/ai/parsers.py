@@ -39,6 +39,30 @@ def _parse_due_date(value) -> datetime | None:
     return None
 
 
+def _clean_str(value) -> str | None:
+    """字符串字段：去空白，空串视为 None。"""
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _coerce_tags(value) -> list[str]:
+    """标签字段：强制转成非空字符串列表。"""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(t).strip() for t in value if str(t).strip()]
+    return []
+
+
+def _coerce_priority(value) -> TaskPriority | None:
+    """优先级字段：非法值返回 None（由上层取默认值）。"""
+    if value is None or isinstance(value, TaskPriority):
+        return value
+    try:
+        return TaskPriority(str(value).strip().lower())
+    except ValueError:
+        return None
+
+
 class GenerateOutput(BaseModel):
     """自然语言抽取的原始结果（宽松校验）。"""
 
@@ -52,34 +76,55 @@ class GenerateOutput(BaseModel):
 
     @field_validator("title", "description", mode="before")
     @classmethod
-    def _clean_str(cls, v):
-        return v.strip() if isinstance(v, str) and v.strip() else None
-
-    @field_validator("priority", mode="before")
-    @classmethod
-    def _coerce_priority(cls, v):
-        if v is None or isinstance(v, TaskPriority):
-            return v
-        try:
-            return TaskPriority(str(v).strip().lower())
-        except ValueError:
-            return None
-
-    @field_validator("tags", mode="before")
-    @classmethod
-    def _coerce_tags(cls, v):
-        if v is None:
-            return []
-        if isinstance(v, list):
-            return [str(t).strip() for t in v if str(t).strip()]
-        return []
+    def _clean(cls, v):
+        return _clean_str(v)
 
     @field_validator("due_date", mode="before")
     @classmethod
-    def _coerce_due_date(cls, v):
+    def _due(cls, v):
         return _parse_due_date(v)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _prio(cls, v):
+        return _coerce_priority(v)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _tags(cls, v):
+        return _coerce_tags(v)
+
+
+class RecommendOutput(BaseModel):
+    """标签/优先级/分类推荐的原始结果（宽松校验）。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    tags: list[str] = []
+    priority: TaskPriority | None = None
+    category: str | None = None
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _tags(cls, v):
+        return _coerce_tags(v)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _prio(cls, v):
+        return _coerce_priority(v)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _cat(cls, v):
+        return _clean_str(v)
 
 
 def parse_generate_output(data: dict) -> GenerateOutput:
     """把 LLM 返回的 dict 校验为 GenerateOutput。"""
     return GenerateOutput.model_validate(data)
+
+
+def parse_recommend_output(data: dict) -> RecommendOutput:
+    """把 LLM 返回的 dict 校验为 RecommendOutput。"""
+    return RecommendOutput.model_validate(data)

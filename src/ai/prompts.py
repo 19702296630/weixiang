@@ -17,3 +17,18 @@ GENERATE_SYSTEM = """你是一个任务信息抽取助手。从用户的中文�
 def generate_user(text: str) -> str:
     """构造抽取任务的用户消息。"""
     return f"请从下面的自然语言中抽取任务信息：{text}"
+
+
+# ===================== 标签/优先级/分类推荐（§8.3） =====================
+
+RECOMMEND_SYSTEM = """你是任务分类助手。根据任务标题和描述，输出一个 JSON 对象：
+- tags: 标签（字符串数组，2-4 个，如 ["购物"]）
+- priority: 优先级（"low" | "medium" | "high"）
+- category: 类别（从 工作/学习/生活/健康/财务/社交 中选一个）
+
+只输出 JSON，不要输出任何解释。"""
+
+
+def recommend_user(title: str, description: str | None) -> str:
+    """构造推荐任务的用户消息。"""
+    return f"标题：{title}\n描述：{description or ''}"

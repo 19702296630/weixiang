@@ -3,6 +3,7 @@ import logging
 
 from src.ai import prompts
 from src.ai.client import llm_client
+from src.ai.fallback import generate_fallback
 from src.ai.parsers import parse_generate_output
 from src.models.schemas import TaskDraft
 from src.models.task import TaskPriority
@@ -14,7 +15,7 @@ def generate_task_draft(text: str) -> TaskDraft:
     """把一句自然语言转成任务草稿。
 
     返回 TaskDraft，`source` 标记结果来自 LLM 还是降级规则。
-    任何 LLM 异常（超时/网络/解析失败）都会回退到简单规则，保证有可用结果。
+    任何 LLM 异常（超时/网络/解析失败）都会回退到规则引擎，保证有可用结果。
     """
     text = text.strip()
     if not text:
@@ -31,13 +32,6 @@ def generate_task_draft(text: str) -> TaskDraft:
             due_date=out.due_date,
             source="llm",
         )
-    except Exception as exc:  # noqa: BLE001 — 降级：LLM 异常统一回退到规则方案
-        logger.warning("LLM 生成失败，回退到规则方案：%s", exc)
-        return TaskDraft(
-            title=text,
-            description=None,
-            priority=TaskPriority.medium,
-            tags=None,
-            due_date=None,
-            source="fallback",
-        )
+    except Exception as exc:  # noqa: BLE001 — 降级：LLM 异常统一回退到规则引擎
+        logger.warning("LLM 生成失败，回退到规则引擎：%s", exc)
+        return generate_fallback(text)
