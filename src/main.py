@@ -1,9 +1,10 @@
 """FastAPI 应用入口。"""
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import text
 
 from src.config import settings
@@ -12,6 +13,9 @@ from src.models.task import Task  # noqa: F401  # 注册模型到 Base.metadata�
 from src.routes import ai, tasks
 
 logger = logging.getLogger(__name__)
+
+# 前端静态页面（原生 HTML/CSS/JS，无构建步骤）
+INDEX_PATH = Path(__file__).resolve().parent.parent / "static" / "index.html"
 
 
 @asynccontextmanager
@@ -39,10 +43,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     return JSONResponse(status_code=500, content={"detail": "服务器内部错误"})
 
 
-@app.get("/", tags=["meta"])
-def root() -> dict:
-    """根路径，用于快速确认服务已启动。"""
-    return {"status": "ok", "service": "task-management", "version": "0.1.0"}
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """用户界面入口：返回前端页面。"""
+    return FileResponse(INDEX_PATH)
 
 
 @app.get("/healthz", tags=["meta"])

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能任务管理系统</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --high: #dc2626;
+    --medium: #d97706;
+    --low: #6b7280;
+    --done: #16a34a;
+    --progress: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  .container { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  /* 摘要栏 */
+  .summary-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .period-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #summaryText { font-size: 15px; margin: 6px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .chip {
+    background: #f3f4f6;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .chip b { color: var(--text); }
+
+  /* 卡片通用 */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* 创建栏 */
+  .create-row { display: flex; gap: 8px; }
+  .create-row input[type="text"] {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+  }
+  .create-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    padding: 11px 18px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover { background: #f9fafb; }
+  button.danger { background: #fff; color: var(--high); border: 1px solid var(--border); }
+  button.danger:hover { background: #fef2f2; }
+
+  /* 草稿预览 */
+  .draft { border-left: 3px solid var(--accent); }
+  .draft .kv { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0; align-items: center; }
+  .draft .kv select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 13px; }
+  .draft .kv span { font-size: 13px; color: var(--muted); }
+  .draft .kv b { color: var(--text); }
+
+  /* 筛选 */
+  .filters { display: flex; gap: 8px; align-items: center; }
+  .filters select {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+  }
+  .filters .spacer { flex: 1; }
+
+  /* 任务列表 */
+  .task {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .task:last-child { border-bottom: none; }
+  .task .main { flex: 1; min-width: 0; }
+  .task .title { font-size: 15px; font-weight: 600; }
+  .task .title.done { text-decoration: line-through; color: var(--muted); }
+  .task .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .task .desc { font-size: 13px; color: var(--muted); margin-top: 3px; white-space: pre-wrap; }
+  .badge { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-right: 4px; }
+  .badge.p-high { background: #fee2e2; color: var(--high); }
+  .badge.p-medium { background: #fef3c7; color: var(--medium); }
+  .badge.p-low { background: #f3f4f6; color: var(--low); }
+  .badge.s-pending { background: #f3f4f6; color: var(--muted); }
+  .badge.s-in_progress { background: #dbeafe; color: var(--progress); }
+  .badge.s-completed { background: #dcfce7; color: var(--done); }
+  .task .actions { display: flex; gap: 6px; }
+  .task .actions button { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  /* 弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal h3 { margin: 0 0 12px; }
+  .modal ul { margin: 0; padding-left: 18px; }
+  .modal li { margin: 6px 0; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #111827; color: #fff; border-radius: 10px; padding: 10px 18px;
+    font-size: 14px; z-index: 20; opacity: 0; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--high); }
+</style>
+</head>
+<body>
+<header><h1>📋 智能任务管理系统</h1></header>
+
+<div class="container">
+  <!-- 摘要栏 -->
+  <div class="summary-bar">
+    <div class="summary-top">
+      <button class="period-btn" data-period="day">今日</button>
+      <button class="period-btn active" data-period="week">本周</button>
+    </div>
+    <div id="summaryText">加载中…</div>
+    <div class="chips" id="summaryStats"></div>
+  </div>
+
+  <!-- 自然语言创建 -->
+  <div class="card">
+    <div class="create-row">
+      <input id="nlInput" type="text" placeholder="用一句话创建任务，如：明天下午3点提醒我买日用品">
+      <button id="generateBtn">✨ 智能生成</button>
+    </div>
+    <div class="draft" id="draftCard" hidden>
+      <div class="kv">
+        <span>标题：<b id="dTitle"></b></span>
+        <span>优先级：
+          <select id="dPriority">
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
+        </span>
+        <span>标签：<b id="dTags"></b></span>
+        <span>截止：<b id="dDue"></b></span>
+        <span>来源：<b id="dSource"></b></span>
+      </div>
+      <button id="confirmBtn">✅ 确认创建</button>
+      <button class="secondary" id="cancelBtn">取消</button>
+    </div>
+  </div>
+
+  <!-- 手动创建 + AI 推荐 -->
+  <div class="card">
+    <details>
+      <summary style="cursor:pointer;font-weight:600">手动创建（含 AI 推荐）</summary>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <input id="mTitle" type="text" placeholder="标题，如：写季度报告">
+        <input id="mDesc" type="text" placeholder="描述（可选），如：给老板汇报 Q3 业绩">
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="mPriority">
+            <option value="medium">优先级：中</option>
+            <option value="low">优先级：低</option>
+            <option value="high">优先级：高</option>
+          </select>
+          <input id="mTags" type="text" placeholder="标签（逗号分隔）" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:13px;color:var(--muted);white-space:nowrap">截止时间</label>
+          <input id="mDue" type="datetime-local" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px">
+        </div>
+        <div id="recommendResult" style="font-size:13px;color:var(--muted)"></div>
+        <div style="display:flex;gap:8px">
+          <button class="secondary" id="recommendBtn">🤖 智能推荐标签/优先级</button>
+          <button id="manualCreateBtn">创建</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 筛选 -->
+  <div class="filters">
+    <select id="statusFilter">
+      <option value="">全部状态</option>
+      <option value="pending">待处理</option>
+      <option value="in_progress">进行中</option>
+      <option value="completed">已完成</option>
+    </select>
+    <select id="priorityFilter">
+      <option value="">全部优先级</option>
+      <option value="low">低</option>
+      <option value="medium">中</option>
+      <option value="high">高</option>
+    </select>
+    <div class="spacer"></div>
+    <button class="secondary" id="refreshBtn">刷新</button>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="card" id="taskList"></div>
+</div>
+
+<!-- 拆解弹窗 -->
+<div class="modal-mask" id="breakdownMask" hidden>
+  <div class="modal">
+    <h3>任务拆解</h3>
+    <div id="breakdownBody"></div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="secondary" id="closeModalBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/v1';
+let currentDraft = null;
+let currentPeriod = 'week';
+
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { el.className = 'toast'; }, 2500);
+}
+
+async function api(path, options) {
+  const res = await fetch(API + path, options);
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.detail || res.statusText);
+  return body;
+}
+
+const PRIORITY_LABEL = { high: '高', medium: '中', low: '低' };
+const STATUS_LABEL = { pending: '待处理', in_progress: '进行中', completed: '已完成' };
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const t = new Date(d);
+  if (isNaN(t)) return '—';
+  return t.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadSummary() {
+  try {
+    const data = await api('/ai/summarize?period=' + currentPeriod, { method: 'POST' });
+    document.getElementById('summaryText').textContent = data.summary;
+    const s = data.stats;
+    document.getElementById('summaryStats').innerHTML =
+      `<span class="chip">总数 <b>${s.total}</b></span>` +
+      `<span class="chip">高优先级 <b>${s.high_priority}</b></span>` +
+      `<span class="chip">已完成 <b>${s.completed}</b></span>` +
+      `<span class="chip">逾期 <b>${s.overdue}</b></span>`;
+  } catch (e) {
+    document.getElementById('summaryText').textContent = '摘要加载失败';
+  }
+}
+
+async function loadTasks() {
+  const status = document.getElementById('statusFilter').value;
+  const priority = document.getElementById('priorityFilter').value;
+  const qs = new URLSearchParams({ page_size: 100 });
+  if (status) qs.set('status', status);
+  if (priority) qs.set('priority', priority);
+  const data = await api('/tasks?' + qs.toString());
+  renderTasks(data.items);
+}
+
+function renderTasks(tasks) {
+  const box = document.getElementById('taskList');
+  if (!tasks.length) {
+    box.innerHTML = '<div class="empty">暂无任务，试试用一句话创建一个吧 ✨</div>';
+    return;
+  }
+  box.innerHTML = tasks.map(t => `
+    <div class="task">
+      <div class="main">
+        <div>
+          <span class="badge p-${t.priority}">${PRIORITY_LABEL[t.priority]}</span>
+          <span class="badge s-${t.status}">${STATUS_LABEL[t.status]}</span>
+          <span class="title ${t.status === 'completed' ? 'done' : ''}">${esc(t.title)}</span>
+        </div>
+        ${t.description ? `<div class="desc">${esc(t.description)}</div>` : ''}
+        <div class="meta">截止 ${fmtDate(t.due_date)}${t.tags && t.tags.length ? ' · ' + t.tags.map(esc).join(', ') : ''}</div>
+      </div>
+      <div class="actions">
+        ${t.status !== 'completed' ? `<button class="secondary" onclick="advance(${t.id}, '${t.status}')">${t.status === 'pending' ? '开始' : '完成'}</button>` : ''}
+        <button class="secondary" onclick="breakdown(${t.id})">拆解</button>
+        <button class="danger" onclick="remove(${t.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function generate() {
+  const text = document.getElementById('nlInput').value.trim();
+  if (!text) { toast('请输入任务描述', true); return; }
+  try {
+    const d = await api('/ai/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    currentDraft = d;
+    document.getElementById('dTitle').textContent = d.title;
+    document.getElementById('dPriority').value = d.priority;
+    document.getElementById('dTags').textContent = (d.tags || []).join(', ') || '—';
+    document.getElementById('dDue').textContent = fmtDate(d.due_date);
+    document.getElementById('dSource').textContent = d.source === 'llm' ? 'AI 解析' : '规则兜底';
+    document.getElementById('draftCard').hidden = false;
+  } catch (e) { toast(e.message, true); }
+}
+
+async function confirmDraft() {
+  if (!currentDraft) return;
+  try {
+    await api('/tasks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: currentDraft.title,
+        description: currentDraft.description,
+        priority: document.getElementById('dPriority').value,
+        tags: currentDraft.tags,
+        due_date: currentDraft.due_date
+      })
+    });
+    document.getElementById('nlInput').value = '';
+    document.getElementById('draftCard').hidden = true;
+    currentDraft = null;
+    toast('任务已创建');
+    refresh();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function recommend() {
+  const title = document.getElementById('mTitle').value.trim();
+  const desc = document.getElementById('mDesc').value.trim();
+  if (!title) { toast('请先填标题', true); return; }
+  try {
+    const r = await api('/ai/recommend', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description: desc || null })
+    });
+    document.getElementById('mPriority').value = r.priority;
+    document.getElementById('mTags').value = (r.tags || []).join(', ');
+    document.getElementById('recommendResult').textContent =
+      `推荐分类：${r.category} · 标签：${(r.tags || []).join(', ') || '—'} · 优先级：${PRIORITY_LABEL[r.priority]}（${r.source === 'llm' ? 'AI' : '规则'}）`;
+  } catch (e) { toast(e.message, true); }
+}
+
+async function manualCreate() {
+  const title = document.getElementById('mTitle').value.trim();
+  if (!title) { toast('请填标题', true); return; }
+  const tags = document.getElementById('mTags').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  try {
+    await api('/tasks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        description: document.getElementById('mDesc').value.trim() || null,
+        priority: document.getElementById('mPriority').value,
+        tags: tags.length ? tags : null,
+        due_date: document.getElementById('mDue').value ? document.getElementById('mDue').value + ':00' : null
+      })
+    });
+    document.getElementById('mTitle').value = '';
+    document.getElementById('mDesc').value = '';
+    document.getElementById('mTags').value = '';
+    document.getElementById('mDue').value = '';
+    document.getElementById('recommendResult').textContent = '';
+    toast('任务已创建');
+    refresh();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function advance(id, status) {
+  const next = status === 'pending' ? 'in_progress' : 'completed';
+  try {
+    await api('/tasks/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+    loadTasks();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function remove(id) {
+  if (!confirm('确认删除这个任务？')) return;
+  try {
+    await api('/tasks/' + id, { method: 'DELETE' });
+    toast('已删除');
+    refresh();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function breakdown(id) {
+  try {
+    const r = await api('/ai/tasks/' + id + '/breakdown', { method: 'POST' });
+    const body = document.getElementById('breakdownBody');
+    if (!r.subtasks.length) {
+      body.innerHTML = '<div style="color:#6b7280">（AI 未能拆解，暂无子任务）</div>';
+    } else {
+      body.innerHTML = '<ul>' + r.subtasks.map(s =>
+        `<li>${esc(s.title)} <span class="badge p-${s.priority}">${PRIORITY_LABEL[s.priority]}</span></li>`
+      ).join('') + '</ul>';
+    }
+    document.getElementById('breakdownMask').hidden = false;
+  } catch (e) { toast(e.message, true); }
+}
+
+function refresh() { loadTasks(); loadSummary(); }
+
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('nlInput').addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+document.getElementById('confirmBtn').addEventListener('click', confirmDraft);
+document.getElementById('cancelBtn').addEventListener('click', () => {
+  document.getElementById('draftCard').hidden = true;
+  currentDraft = null;
+});
+document.getElementById('recommendBtn').addEventListener('click', recommend);
+document.getElementById('manualCreateBtn').addEventListener('click', manualCreate);
+document.getElementById('refreshBtn').addEventListener('click', () => { loadTasks(); });
+document.getElementById('statusFilter').addEventListener('change', loadTasks);
+document.getElementById('priorityFilter').addEventListener('change', loadTasks);
+document.getElementById('closeModalBtn').addEventListener('click', () => {
+  document.getElementById('breakdownMask').hidden = true;
+});
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = btn.dataset.period;
+    loadSummary();
+  });
+});
+
+refresh();
+</script>
+</body>
+</html>

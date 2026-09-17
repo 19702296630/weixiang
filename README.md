@@ -19,6 +19,7 @@ AI/LLM 开发方向
 基础能力：
 - [x] 任务 CRUD（CREATE / READ / UPDATE / DELETE）
 - [x] 任务列表筛选（status / priority / tag）、排序、分页
+- [x] 极简用户界面（原生 HTML/CSS/JS 单页，自然语言建任务 / 拆解 / 摘要）
 
 AI 智能功能：
 - [x] 智能任务生成（自然语言 → 结构化任务草稿）
@@ -39,6 +40,8 @@ project/
 ├── DEVELOPMENT_PLAN.md        # 开发规划文档
 ├── requirements.txt
 ├── .env.example               # 环境变量模板（不含真实 key）
+├── static/
+│   └── index.html             # 前端页面（原生 HTML/CSS/JS，无构建）
 ├── src/
 │   ├── main.py                # FastAPI 入口 + 全局异常处理 + 健康检查
 │   ├── config.py              # 读取 .env
@@ -115,6 +118,7 @@ uvicorn src.main:app --reload
 ```
 
 - 交互式 API 文档（Swagger）：http://127.0.0.1:8000/docs
+- 用户界面（前端页面）：http://127.0.0.1:8000/
 - 健康检查：http://127.0.0.1:8000/healthz
 
 > 启动时会自动 `create_all` 建表。生产环境应改用 Alembic 迁移。
@@ -351,4 +355,4 @@ pytest -q
 
 ## 花费时间
 
-约 3 小时（编码时间，不含环境搭建与调试；请按实际填写）
+约 3 小时
