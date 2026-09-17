@@ -32,3 +32,30 @@ RECOMMEND_SYSTEM = """你是任务分类助手。根据任务标题和描述，�
 def recommend_user(title: str, description: str | None) -> str:
     """构造推荐任务的用户消息。"""
     return f"标题：{title}\n描述：{description or ''}"
+
+
+# ===================== 任务拆解（§8.4） =====================
+
+BREAKDOWN_SYSTEM = """你是一个任务拆解助手。把一个复杂任务拆成 3-7 个可执行、可独立完成的子任务。
+只输出 JSON：{"subtasks":[{"title":"子任务1","priority":"low|medium|high"}, ...]}。
+不要输出任何解释。"""
+
+
+def breakdown_user(title: str, description: str | None) -> str:
+    return f"任务标题：{title}\n任务描述：{description or ''}"
+
+
+# ===================== 任务摘要（§8.5） =====================
+
+SUMMARY_SYSTEM = """你是任务管理助手。根据给定的统计数据生成一句简洁、自然的中文任务摘要。
+只输出 JSON：{"summary":"..."}。必须使用给定数字，不要编造或省略关键信息。"""
+
+
+def summary_user(label: str, stats) -> str:
+    return (
+        f"周期：{label}\n"
+        f"任务总数：{stats.total}\n"
+        f"高优先级待处理：{stats.high_priority}\n"
+        f"已完成：{stats.completed}\n"
+        f"已逾期：{stats.overdue}"
+    )

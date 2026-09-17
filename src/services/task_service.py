@@ -3,6 +3,7 @@
 与 AI 层解耦：本模块只关心任务持久化，不 import 任何 LLM 客户端。
 """
 import json
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -82,3 +83,8 @@ class TaskService:
         self.db.delete(task)
         self.db.commit()
         return True
+
+    def list_created_since(self, start: datetime) -> list[Task]:
+        """列出 created_at >= start 的任务（用于每日/每周摘要）。"""
+        stmt = select(Task).where(Task.created_at >= start).order_by(Task.created_at.desc())
+        return list(self.db.scalars(stmt).all())

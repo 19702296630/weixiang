@@ -128,3 +128,61 @@ def parse_generate_output(data: dict) -> GenerateOutput:
 def parse_recommend_output(data: dict) -> RecommendOutput:
     """把 LLM 返回的 dict 校验为 RecommendOutput。"""
     return RecommendOutput.model_validate(data)
+
+
+class SubtaskItem(BaseModel):
+    """拆解出的单个子任务（宽松校验）。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    title: str | None = None
+    priority: TaskPriority | None = None
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def _title(cls, v):
+        return _clean_str(v)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _prio(cls, v):
+        return _coerce_priority(v)
+
+
+class BreakdownOutput(BaseModel):
+    """任务拆解的原始结果。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    subtasks: list[SubtaskItem] = []
+
+    @field_validator("subtasks", mode="before")
+    @classmethod
+    def _normalize(cls, v):
+        # 兼容 LLM 返回字符串列表（["订蛋糕", ...]）或对象列表
+        if not isinstance(v, list):
+            return []
+        return [{"title": s} if isinstance(s, str) else s for s in v if isinstance(s, (str, dict))]
+
+
+class SummaryOutput(BaseModel):
+    """任务摘要的原始结果。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    summary: str | None = None
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def _summary(cls, v):
+        return _clean_str(v)
+
+
+def parse_breakdown_output(data: dict) -> BreakdownOutput:
+    """把 LLM 返回的 dict 校验为 BreakdownOutput。"""
+    return BreakdownOutput.model_validate(data)
+
+
+def parse_summary_output(data: dict) -> SummaryOutput:
+    """把 LLM 返回的 dict 校验为 SummaryOutput。"""
+    return SummaryOutput.model_validate(data)

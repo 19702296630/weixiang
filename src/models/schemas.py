@@ -88,3 +88,36 @@ class RecommendResponse(BaseModel):
     priority: TaskPriority
     category: str
     source: Literal["llm", "fallback"]
+
+
+class Subtask(BaseModel):
+    """拆解出的子任务。"""
+
+    title: str
+    priority: TaskPriority = TaskPriority.medium
+
+
+class BreakdownResponse(BaseModel):
+    """任务拆解响应。"""
+
+    task_id: int
+    subtasks: list[Subtask]
+    source: Literal["llm", "fallback"]
+
+
+class SummaryStats(BaseModel):
+    """摘要的统计数字（由代码精确计算）。"""
+
+    total: int
+    high_priority: int
+    completed: int
+    overdue: int
+
+
+class SummaryResponse(BaseModel):
+    """每日/每周任务摘要响应。"""
+
+    period: str
+    stats: SummaryStats
+    summary: str
+    source: Literal["llm", "fallback"]
